@@ -33,6 +33,8 @@ Distributed as-is; no warranty is given.
 #include "Wire.h"
 #include <math.h>
 
+extern TwoWire auxWire;
+
 //****************************************************************************//
 //
 //  CCS811Core functions
@@ -48,8 +50,6 @@ CCS811Core::status CCS811Core::beginCore(void)
 {
 	CCS811Core::status returnError = SENSOR_SUCCESS;
 
-	Wire.begin();
-
 #ifdef __AVR__
 #else
 #endif
@@ -59,7 +59,7 @@ CCS811Core::status CCS811Core::beginCore(void)
 #endif
 
 #if defined(ARDUINO_ARCH_ESP8266)
-	Wire.setClockStretchLimit(200000);// was default 230 uS, now 200ms
+	auxWire.setClockStretchLimit(200000);// was default 230 uS, now 200ms
 #else
 #endif
 
@@ -101,16 +101,16 @@ CCS811Core::status CCS811Core::readRegister(uint8_t offset, uint8_t* outputPoint
 	uint8_t result = 1;
 	uint8_t numBytes = 1;
 	CCS811Core::status returnError = SENSOR_SUCCESS;
-	Wire.beginTransmission(I2CAddress);
-	Wire.write(offset);
-	if( Wire.endTransmission() != 0 )
+	auxWire.beginTransmission(I2CAddress);
+	auxWire.write(offset);
+	if( auxWire.endTransmission() != 0 )
 	{
 		returnError = SENSOR_I2C_ERROR;
 	}
-	Wire.requestFrom(I2CAddress, numBytes);
-	while ( Wire.available() ) // slave may send less than requested
+	auxWire.requestFrom(I2CAddress, numBytes);
+	while ( auxWire.available() ) // slave may send less than requested
 	{
-		result = Wire.read(); // receive a byte as a proper uint8_t
+		result = auxWire.read(); // receive a byte as a proper uint8_t
 	}
 	*outputPointer = result;
 
@@ -140,19 +140,19 @@ CCS811Core::status CCS811Core::multiReadRegister(uint8_t offset, uint8_t *output
 	uint8_t i = 0;
 	uint8_t c = 0;
 	//Set the address
-	Wire.beginTransmission(I2CAddress);
-	Wire.write(offset);
-	if( Wire.endTransmission() != 0 )
+	auxWire.beginTransmission(I2CAddress);
+	auxWire.write(offset);
+	if( auxWire.endTransmission() != 0 )
 	{
 		returnError = SENSOR_I2C_ERROR;
 	}
 	else  //OK, all worked, keep going
 	{
 		// request 6 bytes from slave device
-		Wire.requestFrom(I2CAddress, length);
-		while ( (Wire.available()) && (i < length))  // slave may send less than requested
+		auxWire.requestFrom(I2CAddress, length);
+		while ( (auxWire.available()) && (i < length))  // slave may send less than requested
 		{
-			c = Wire.read(); // receive a byte as character
+			c = auxWire.read(); // receive a byte as character
 			*outputPointer = c;
 			outputPointer++;
 			i++;
@@ -175,10 +175,10 @@ CCS811Core::status CCS811Core::multiReadRegister(uint8_t offset, uint8_t *output
 CCS811Core::status CCS811Core::writeRegister(uint8_t offset, uint8_t dataToWrite) {
 	CCS811Core::status returnError = SENSOR_SUCCESS;
 	
-	Wire.beginTransmission(I2CAddress);
-	Wire.write(offset);
-	Wire.write(dataToWrite);
-	if( Wire.endTransmission() != 0 )
+	auxWire.beginTransmission(I2CAddress);
+	auxWire.write(offset);
+	auxWire.write(dataToWrite);
+	if( auxWire.endTransmission() != 0 )
 	{
 		returnError = SENSOR_I2C_ERROR;
 	}
@@ -206,15 +206,15 @@ CCS811Core::status CCS811Core::multiWriteRegister(uint8_t offset, uint8_t *input
 	//define pointer that will point to the external space
 	uint8_t i = 0;
 	//Set the address
-	Wire.beginTransmission(I2CAddress);
-	Wire.write(offset);
+	auxWire.beginTransmission(I2CAddress);
+	auxWire.write(offset);
 	while ( i < length )  // send data bytes
 	{
-		Wire.write(*inputPointer); // receive a byte as character
+		auxWire.write(*inputPointer); // receive a byte as character
 		inputPointer++;
 		i++;
 	}
-	if( Wire.endTransmission() != 0 )
+	if( auxWire.endTransmission() != 0 )
 	{
 		returnError = SENSOR_I2C_ERROR;
 	}
@@ -281,9 +281,9 @@ CCS811Core::status CCS811::begin( void )
 	if( appValid() == false ) return SENSOR_INTERNAL_ERROR;
 	
 	//Write 0 bytes to this register to start app
-	Wire.beginTransmission(I2CAddress);
-	Wire.write(CSS811_APP_START);
-	if( Wire.endTransmission() != 0 )
+	auxWire.beginTransmission(I2CAddress);
+	auxWire.write(CSS811_APP_START);
+	if( auxWire.endTransmission() != 0 )
 	{
 		return SENSOR_I2C_ERROR;
 	}	
